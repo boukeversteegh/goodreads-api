@@ -1,6 +1,6 @@
 <?php
 
-namespace Bksy;
+namespace Bksy\GoodReads;
 use DirectoryIterator;
 use Exception;
 
@@ -12,7 +12,7 @@ use Exception;
  *
  * @author danielgwood <github.com/danielgwood>
  */
-class GoodReads
+class Client
 {
     /**
      * Root URL of the API (no trailing slash).
