@@ -1,4 +1,9 @@
 <?php
+
+namespace Bksy;
+use DirectoryIterator;
+use Exception;
+
 /**
  * A quick-and-dirty API class for GoodReads.
  *
@@ -142,7 +147,7 @@ class GoodReads
      * @param  string $endpoint A GoodReads API function name
      * @param  array  $params   Optional parameters
      * @return array
-     * @throws Exception If it didn't work
+     * @throws \Exception If it didn't work
      */
     private function request($endpoint, array $params = array())
     {
@@ -178,7 +183,7 @@ class GoodReads
             $errorMessage = curl_error($ch);
             if($errorNumber > 0)
             {
-                throw new Exception('Method failed: ' . $endpoint . ': ' . $errorMessage);
+                throw new \Exception('Method failed: ' . $endpoint . ': ' . $errorMessage);
             }
             curl_close($ch);
         } else {
@@ -201,12 +206,14 @@ class GoodReads
             throw new Exception('Server error on "' . $url . '": ' . $response);
         }
     }
+
     /**
      * Attempt to get something from the cache.
      *
      * @param  string $endpoint
-     * @param  array  $params
+     * @param  array $params
      * @return array|false
+     * @throws Exception
      */
     private function getCache($endpoint, array $params = array())
     {
@@ -228,13 +235,15 @@ class GoodReads
             throw new Exception('Cache directory not writable.');
         }
     }
+
     /**
      * Add an item to the cache.
      *
      * @param string $endpoint
-     * @param array  $params
-     * @param array  $contents
-     * @return boolean
+     * @param array $params
+     * @param array $contents
+     * @return bool
+     * @throws Exception
      */
     private function addCache($endpoint, array $params = array(), array $contents)
     {

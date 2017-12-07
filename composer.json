@@ -1,14 +1,24 @@
 {
-    "name": "boukeversteegh/goodreads-api",
+    "name": "bksy/goodreads-api",
     "description": "A quick PHP wrapper class for the GoodReads API.",
     "type": "library",
     "license": "MIT",
     "authors": [
         {
-            "name": "danielgwood, Bouke Versteegh",
-            "email": "info@boukeversteegh.nl"
+            "name": "danielgwood",
+            "homepage": "https://github.com/danielgwood"
+        },
+        {
+            "name": "Bouke Versteegh",
+            "email": "info@boukeversteegh.nl",
+            "homepage": "https://github.com/boukeversteegh"
         }
     ],
     "minimum-stability": "dev",
-    "require": {}
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Bksy\\": "src/"
+        }
+    }
 }
