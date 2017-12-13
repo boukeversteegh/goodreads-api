@@ -1,6 +1,7 @@
 <?php
 
 namespace Bksy\GoodReads;
+
 use DirectoryIterator;
 use Exception;
 
@@ -26,18 +27,22 @@ class Client
      * How long to sleep between requests to prevent flooding/TOS violation (milliseconds).
      */
     const SLEEP_BETWEEN_REQUESTS = 1000;
+
     /**
      * @var string Your API key.
      */
     protected $apiKey = '';
+
     /**
      * @var string Cache directory (defaults to ./cache).
      */
     protected $cacheDir = 'cache';
+
     /**
      * @var integer When was the last request made?
      */
     protected $lastRequestTime = 0;
+
     /**
      * Initialise the API wrapper instance.
      *
@@ -47,9 +52,10 @@ class Client
     public function __construct($apiKey, $cacheDirectory = '')
     {
         $this->apiKey = (string)$apiKey;
-        $this->cacheDir = (string)$cacheDirectory;
+        $this->cacheDir = $cacheDirectory === null ? null : (string)$cacheDirectory;
         $this->clearExpiredCache();
     }
+
     /**
      * Get details for a given author.
      *
@@ -60,12 +66,13 @@ class Client
     {
         return $this->request(
             'author/show',
-            array(
+            [
                 'key' => $this->apiKey,
-                'id' => (int)$authorId
-            )
+                'id' => (int)$authorId,
+            ]
         );
     }
+
     /**
      * Get details for a given user.
      *
@@ -76,27 +83,28 @@ class Client
     {
         return $this->request(
             'user/show',
-            array(
+            [
                 'key' => $this->apiKey,
-                'id' => (int)$userId
-            )
+                'id' => (int)$userId,
+            ]
         );
     }
+
     /**
      * Get a shelf for a given user.
      *
      * @param  integer $userId
-     * @param  string  $shelf  read|currently-reading|to-read etc
-     * @param  string  $sort   title|author|rating|year_pub|date_pub|date_read|date_added|avg_rating etc
-     * @param  integer $limit  1-200
-     * @param  integer $page   1-N
+     * @param  string $shelf read|currently-reading|to-read etc
+     * @param  string $sort title|author|rating|year_pub|date_pub|date_read|date_added|avg_rating etc
+     * @param  integer $limit 1-200
+     * @param  integer $page 1-N
      * @return array
      */
     public function getShelf($userId, $shelf, $sort = 'title', $limit = 100, $page = 1)
     {
         return $this->request(
             'review/list',
-            array(
+            [
                 'v' => 2,
                 'format' => 'xml',     // :( GoodReads still doesn't support JSON for this endpoint
                 'key' => $this->apiKey,
@@ -104,10 +112,11 @@ class Client
                 'shelf' => $shelf,
                 'sort' => $sort,
                 'page' => $page,
-                'per_page' => $limit
-            )
+                'per_page' => $limit,
+            ]
         );
     }
+
     /**
      * Get the details of an author.
      *
@@ -118,6 +127,7 @@ class Client
     {
         return $this->getAuthor($authorId);
     }
+
     /**
      * Get the details of a user.
      *
@@ -128,47 +138,49 @@ class Client
     {
         return $this->getUser($userId);
     }
+
     /**
      * Get the latest books read for a given user.
      *
      * @param  integer $userId
-     * @param  string  $sort   title|author|rating|year_pub|date_pub|date_read|date_added|avg_rating etc
-     * @param  integer $limit  1-200
-     * @param  integer $page   1-N
+     * @param  string $sort title|author|rating|year_pub|date_pub|date_read|date_added|avg_rating etc
+     * @param  integer $limit 1-200
+     * @param  integer $page 1-N
      * @return array
      */
     public function getLatestReads($userId, $sort = 'date_read', $limit = 100, $page = 1)
     {
         return $this->getShelf($userId, 'read', $sort, $limit, $page);
     }
+
     /**
      * Makes requests to the API.
      *
      * @param  string $endpoint A GoodReads API function name
-     * @param  array  $params   Optional parameters
+     * @param  array $params Optional parameters
      * @return array
      * @throws \Exception If it didn't work
      */
-    private function request($endpoint, array $params = array())
+    private function request($endpoint, array $params = [])
     {
         // Check the cache
         $cachedData = $this->getCache($endpoint, $params);
-        if($cachedData !== false) {
+        if ($cachedData !== false) {
             return $cachedData;
         }
         // Prepare the URL and headers
-        $url = self::API_URL .'/'. $endpoint . '?' . ((!empty($params)) ? http_build_query($params, '', '&') : '');
-        $headers = array(
+        $url = self::API_URL . '/' . $endpoint . '?' . ((!empty($params)) ? http_build_query($params, '', '&') : '');
+        $headers = [
             'Accept: application/xml',
-        );
-        if(isset($params['format']) && $params['format'] === 'json') {
-            $headers = array(
+        ];
+        if (isset($params['format']) && $params['format'] === 'json') {
+            $headers = [
                 'Accept: application/json',
-            );
+            ];
         }
         // Execute via CURL
         $response = null;
-        if(extension_loaded('curl')) {
+        if (extension_loaded('curl')) {
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -181,24 +193,23 @@ class Client
             $body = substr($response, $headerSize);
             $errorNumber = curl_errno($ch);
             $errorMessage = curl_error($ch);
-            if($errorNumber > 0)
-            {
+            if ($errorNumber > 0) {
                 throw new \Exception('Method failed: ' . $endpoint . ': ' . $errorMessage);
             }
             curl_close($ch);
         } else {
             throw new Exception('CURL library not loaded!');
         }
-	
+
         // Try and cadge the results into a half-decent array
         $results = null;
-        if(isset($params['format']) && $params['format'] === 'json') {
-            $results = json_decode($body);
+        if (isset($params['format']) && $params['format'] === 'json') {
+            $results = json_decode($body, true);
         } else {
-            $results = json_decode(json_encode((array)simplexml_load_string($body, 'SimpleXMLElement', LIBXML_NOCDATA)), 1); // I know, I'm a terrible human being
+            $results = json_decode(json_encode((array)simplexml_load_string($body, 'SimpleXMLElement', LIBXML_NOCDATA)), true); // I know, I'm a terrible human being
         }
-	
-        if($results !== null) {
+
+        if ($results !== null) {
             // Cache & return results
             $this->addCache($endpoint, $params, $results);
             return $results;
@@ -215,14 +226,17 @@ class Client
      * @return array|false
      * @throws Exception
      */
-    private function getCache($endpoint, array $params = array())
+    private function getCache($endpoint, array $params = [])
     {
+        if (is_null($this->cacheDir)) {
+            return false;
+        }
         if (file_exists($this->cacheDir) && is_writable($this->cacheDir)) {
             $filename = str_replace('/', '_', $endpoint) . '-' . md5(serialize($params));
             $filename = $this->cacheDir . '/' . $filename;
-            if(file_exists($filename)) {
+            if (file_exists($filename)) {
                 $contents = unserialize(file_get_contents($filename));
-                if(!is_array($contents) || $contents['cache_expiry'] <= time()) {
+                if (!is_array($contents) || $contents['cache_expiry'] <= time()) {
                     unlink($filename);
                     return false;
                 } else {
@@ -245,8 +259,11 @@ class Client
      * @return bool
      * @throws Exception
      */
-    private function addCache($endpoint, array $params = array(), array $contents)
+    private function addCache($endpoint, array $params = [], array $contents)
     {
+        if (is_null($this->cacheDir)) {
+            return false;
+        }
         if (file_exists($this->cacheDir) && is_writable($this->cacheDir)) {
             $filename = str_replace('/', '_', $endpoint) . '-' . md5(serialize($params));
             $filename = $this->cacheDir . '/' . $filename;
@@ -256,11 +273,15 @@ class Client
             throw new Exception('Cache directory not writable.');
         }
     }
+
     /**
      * Remove old cache items.
      */
     private function clearExpiredCache()
     {
+        if (is_null($this->cacheDir)) {
+            return;
+        }
         if (file_exists($this->cacheDir) && is_writable($this->cacheDir)) {
             foreach (new DirectoryIterator($this->cacheDir) as $file) {
                 if ($file->isDot()) {
